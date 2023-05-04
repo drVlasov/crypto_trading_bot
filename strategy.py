@@ -12,8 +12,8 @@ from binance.client import Client
 import requests
 import pandas as pd
 
-api_key = 'zPn9gQlSagBH5oNjXlR1z84aJE1VYvcsMZRYnfXbaq6DyzxNDtDDv0va6caVW7Sv'
-api_secret = 'CMufR4pPMaLj8IwgCqQhs4H6CgwuiyDbryYa8Q4R4HNMydH6cdLSUsO4WzWnX78g'
+api_key = ''
+api_secret = ''
 
 client = Client(api_key, api_secret)
 
@@ -219,8 +219,8 @@ def get_signal(tick_bars_df, model1):
 
 # telgram send message
 def telegram_bot_sendtext(bot_message):
-    bot_token = '781588676:AAHZRMx4ZsjerGErHQ1E55KNh-gU7OP0Yeg'
-    bot_chatID = '798487149'
+    bot_token = ''
+    bot_chatID = ''
     send_text = 'https://api.telegram.org/bot' + bot_token + '/sendMessage?chat_id=' + bot_chatID + '&parse_mode=Markdown&text=' + bot_message
     response = requests.get(send_text)
     return response.json()
@@ -229,7 +229,7 @@ def telegram_bot_sendtext(bot_message):
 
 # INITIAL SELECT
 start_time = time.time()
-engine = sqlalchemy.create_engine('sqlite:///BTCUSDTstream4.db')
+engine = sqlalchemy.create_engine('sqlite:///BTCUSDTstream2.db')
 
 sql_query = "SELECT * FROM BTCUSDT ORDER BY rowid DESC LIMIT 3000301"
 df = pd.read_sql(sql_query, engine)
@@ -255,7 +255,7 @@ def strategy(last_index, tick_bars_df, qty, s_l=0.5, t_p=0.005, alpha=0.95):
     position = 0
     print(last_index)
     while True:
-        engine = sqlalchemy.create_engine('sqlite:///BTCUSDTstream4.db')
+        engine = sqlalchemy.create_engine('sqlite:///BTCUSDTstream2.db')
         sql_query = "SELECT MAX (rowid) FROM BTCUSDT"
         df2 = pd.read_sql(sql_query, engine)
         last_row = int(df2.iloc[0][0])
