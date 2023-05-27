@@ -250,10 +250,16 @@ print("--- %s seconds ---" % (time.time() - start_time))
 tick_bars_df.tail(3)
 
 
+def write_stats(stat_row):
+    # TODO write to db
+    print(stat_row)
+
+
 def strategy(last_index, tick_bars_df, qty, s_l=0.5, t_p=0.005, alpha=0.95):
     strategy_return = []
     position = 0
     print(last_index)
+    stat_row = {}
     while True:
         engine = sqlalchemy.create_engine('sqlite:///BTCUSDTstream2.db')
         sql_query = "SELECT MAX (rowid) FROM BTCUSDT"
@@ -281,15 +287,22 @@ def strategy(last_index, tick_bars_df, qty, s_l=0.5, t_p=0.005, alpha=0.95):
                 for i in order_buy['fills']:
                     position_buy += float(i['price']) * float(i["qty"])
                 price_buy = position_buy / qty_buy
-                print("BUY", " ", pd.to_datetime(order_buy['transactTime'], unit='ms'), " ", qty, "Price ", price_buy)
+                ts_buy = pd.to_datetime(order_buy['transactTime'], unit='ms')
+                print("BUY", " ", ts_buy, " ", qty, "Price ", price_buy)
                 text = str("BUY ") + \
-                       str(pd.to_datetime(order_buy['transactTime'], unit='ms')) + \
+                       str(ts_buy) + \
                        str(" ") + str(round(qty_buy, 3)) + str(" Price ") + \
                        str(round(price_buy, 2))
                 text = telegram_bot_sendtext(str(text))
                 position = 1
                 stop_loss_price = (1 - s_l * t_p) * price_buy
                 print("SL = ", stop_loss_price)
+
+                stat_row['ts_buy'] = ts_buy
+                stat_row['position_buy'] = position_buy
+                stat_row['price_buy'] = price_buy
+                stat_row['qty_buy'] = qty_buy
+                stat_row['stop_losses'] = [{'price': stop_loss_price, 'ts': ts_buy}]
             if position == 1:
 
                 if price <= stop_loss_price:
@@ -302,10 +315,11 @@ def strategy(last_index, tick_bars_df, qty, s_l=0.5, t_p=0.005, alpha=0.95):
                     for i in order_sell['fills']:
                         position_sell += float(i['price']) * float(i["qty"])
                     price_sell = position_sell / qty_sell
-                    print("SELL", " ", pd.to_datetime(order_sell['transactTime'], unit='ms'), " ", qty_sell, "Price ",
+                    ts_sell = pd.to_datetime(order_sell['transactTime'], unit='ms')
+                    print("SELL", " ", ts_sell, " ", qty_sell, "Price ",
                           price_sell)
                     text = str("SELL ") + \
-                           str(pd.to_datetime(order_sell['transactTime'], unit='ms')) + \
+                           str(ts_sell) + \
                            str(" ") + str(round(qty_sell, 3)) + str(" Price ") + \
                            str(round(price_sell, 2))
                     text = telegram_bot_sendtext(str(text))
@@ -316,11 +330,23 @@ def strategy(last_index, tick_bars_df, qty, s_l=0.5, t_p=0.005, alpha=0.95):
                     text = str("Result ") + str(round(result, 4))
                     text = telegram_bot_sendtext(str(text))
 
+                    stat_row['ts_sell'] = ts_sell
+                    stat_row['position_sell'] = position_sell
+                    stat_row['price_sell'] = price_sell
+                    stat_row['qty_sell'] = qty_sell
+                    stat_row['result'] = result
+                    write_stats(stat_row)
+                    stat_row = {}
+
                 if price > stop_loss_price:
                     if price > price_lag:
                         stop_loss_price = (1 - alpha) * price + alpha * stop_loss_price
                     else:
                         stop_loss_price = stop_loss_price
+                    if stat_row['stop_losses']:
+                        stat_row['stop_losses'].append({'price': stop_loss_price, 'ts': start_time})
+                    else:
+                        stat_row['stop_losses'] = [{'price': stop_loss_price, 'ts': start_time}]
                 print("SL = ", stop_loss_price)
 
             print("--- %s seconds ---" % (time.time() - start_time))
